@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>识别结果</title>
+  <style>
+    body { font-family: Arial; padding: 40px; text-align: center; }
+    .image-box { margin-top: 20px; }
+    .result-box { margin: 20px auto; max-width: 800px; text-align: left; border: 1px solid #ccc; padding: 20px; background: #f9f9f9; }
+    pre { white-space: pre-wrap; word-break: break-word; }
+    a { display: inline-block; margin-top: 20px; color: #007bff; text-decoration: none; }
+    .bbox { margin: 10px 0; padding: 5px; border-bottom: 1px dashed #aaa; }
+  </style>
+</head>
+<body>
+  <h1>识别结果 - {{ result_type }}</h1>
+
+  <div class="image-box">
+    <img src="/static/uploaded/{{ image }}" alt="上传图像" width="600">
+  </div>
+
+  <div class="result-box">
+    {% if result_type == 'GPT' %}
+      <h3>结构分析结果：</h3>
+      <pre>{{ result }}</pre>
+    {% elif result_type == 'SAM' %}
+      <h3>区域识别结果：</h3>
+      {% for item in result %}
+        <div class="bbox">
+          <strong>ID:</strong> {{ item.id }}<br>
+          <strong>BBox:</strong> {{ item.bbox }}<br>
+          <strong>Score:</strong> {{ item.confidence }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  <a href="/">⬅ 返回上传页</a>
+</body>
+</html>
