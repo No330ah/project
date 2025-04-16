@@ -1,45 +1,25 @@
 import torch
 import numpy as np
 import cv2
+from segment_anything import sam_model_registry, SamPredictor
 from PIL import Image
 import os
 
-class DummySAM:
-    def __init__(self, device):
-        self.device = device
+# 初始化 SAM 模型
+sam_checkpoint = "checkpoints/sam_vit_b_01ec64.pth"
+model_type = "vit_b"
 
-    def predict(self, image_rgb):
-        h, w, _ = image_rgb.shape
-        masks = [
-            np.zeros((h, w), dtype=bool),
-            np.zeros((h, w), dtype=bool)
-        ]
-        masks[0][100:200, 100:200] = True
-        masks[1][220:320, 220:370] = True
-        scores = [0.95, 0.89]
-        return masks, scores
+device = "cuda" if torch.cuda.is_available() else "cpu"
+sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+sam.to(device=device)
+predictor = SamPredictor(sam)
 
-class DummyPredictor:
-    def __init__(self, sam_model):
-        self.model = sam_model
-
-    def set_image(self, image_rgb):
-        self.image_rgb = image_rgb
-
-    def predict(self, **kwargs):
-        masks, scores = self.model.predict(self.image_rgb)
-        return masks, scores, None
-
-sam_model = DummySAM(device="cpu")
-predictor = DummyPredictor(sam_model)
-
-# ======= 推理流程入口 =======
 def run_sam_on_image(image_path):
     image = cv2.imread(image_path)
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     predictor.set_image(image_rgb)
 
-    masks, scores, _ = predictor.predict(
+    masks, scores, logits = predictor.predict(
         point_coords=None,
         point_labels=None,
         multimask_output=True
@@ -76,7 +56,7 @@ def save_mask_overlay(image_rgb, masks, scores, image_path):
     for i, (mask, score) in enumerate(zip(masks, scores)):
         color = np.random.randint(0, 255, (3,)).tolist()
 
-        # ✅ 修复颜色混合问题（通道分开写入）
+        # ✅ 正确叠加颜色的方式（每通道处理）
         for c in range(3):
             overlay[..., c][mask] = (
                 0.6 * overlay[..., c][mask] + 0.4 * color[c]
